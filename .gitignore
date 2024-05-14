@@ -2,6 +2,7 @@ __pycache__/
 playground.py 
 playground2.py
 playground.ipynb 
+prepare_files.py
 .ipynb_checkpoints
 .vscode
 .flake8

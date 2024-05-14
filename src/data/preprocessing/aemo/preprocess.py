@@ -10,9 +10,9 @@ datapath_raw = "data/raw/aemo/"
 datapath_processed = "data/processed/aemo/"
 
 # read data
-df = pd.read_csv(
-    f"{datapath_raw}aemo_20222023.csv", index_col=0, parse_dates=True
-).sort_index(axis=1)
+df = pd.read_csv(f"{datapath_raw}aemo.csv", index_col=0, parse_dates=True).sort_index(
+    axis=1
+)
 df_loc = pd.read_excel(f"{datapath_raw}locations_wind_farms.xlsx")
 
 # drop all columns with at least 1000 null values

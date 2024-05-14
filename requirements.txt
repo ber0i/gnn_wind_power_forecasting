@@ -2,6 +2,7 @@ geopandas
 jupyter
 openpyxl
 pandas
+pyarrow
 seaborn
 torch
 torch_geometric

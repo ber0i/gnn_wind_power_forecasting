@@ -7,13 +7,13 @@ import numpy as np
 import pandas as pd
 
 datapath_raw = "data/raw/aemo/"
-datapath_processed = "data/processed/aemo/"
+datapath_processed = "data/processed/aemo/2022/"
 
 # read data
-df = pd.read_csv(f"{datapath_raw}aemo.csv", index_col=0, parse_dates=True).sort_index(
-    axis=1
-)
-df_loc = pd.read_excel(f"{datapath_raw}locations_wind_farms.xlsx")
+df = pd.read_csv(
+    f"{datapath_raw}/wind_power/aemo_2022.csv", index_col=0, parse_dates=True
+).sort_index(axis=1)
+df_loc = pd.read_excel(f"{datapath_raw}/locations/locations_wind_farms.xlsx")
 
 # drop all columns with at least 1000 null values
 null_counts = df.isnull().sum()
@@ -21,7 +21,7 @@ df.dropna(axis=1, thresh=len(df) - 1000, inplace=True)
 print(f"{df.shape[1]} wind farms remain.")
 
 # impute the remaining missing values with the corresponding previous value
-df.fillna(method="ffill", inplace=True)
+df.ffill(inplace=True)
 
 """
 We want to base our graph structure on spatial correlations. Computing correlations on the raw data
@@ -90,11 +90,11 @@ edge_idx_07 = np.array([geq07_startidx, geq07_endidx])
 edge_idx_08 = np.array([geq08_startidx, geq08_endidx])
 edge_idx_09 = np.array([geq09_startidx, geq09_endidx])
 
-# np.save(f"{datapath_processed}edge_index_05.npy", edge_idx_05)
-# np.save(f"{datapath_processed}edge_index_06.npy", edge_idx_06)
-# np.save(f"{datapath_processed}edge_index_07.npy", edge_idx_07)
-# np.save(f"{datapath_processed}edge_index_08.npy", edge_idx_08)
-# np.save(f"{datapath_processed}edge_index_09.npy", edge_idx_09)
+np.save(f"{datapath_processed}edge_index_05.npy", edge_idx_05)
+np.save(f"{datapath_processed}edge_index_06.npy", edge_idx_06)
+np.save(f"{datapath_processed}edge_index_07.npy", edge_idx_07)
+np.save(f"{datapath_processed}edge_index_08.npy", edge_idx_08)
+np.save(f"{datapath_processed}edge_index_09.npy", edge_idx_09)
 
 """
 We now want to define edge features: euclidean distances between wind farms.

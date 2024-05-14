@@ -4,6 +4,10 @@ In this project, we develop physics-induced graph neural networks for spatio-tem
 
 ## Getting Started
 
+### Before Cloning
+
+Before cloning this repository, make sure you have Git LFS installed and set up to proporly download files which were uploaded with Git LFS.
+
 ### Installing Dependencies
 
 Some dependencies require Microsoft Visual C++ 14.0, so make sure to have this installed on your machine first.

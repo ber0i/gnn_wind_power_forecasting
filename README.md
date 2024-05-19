@@ -63,6 +63,9 @@ The datasets used here are
 
 - 10min Supervisory Control and Data Acquisition (SCADA) data from the six wind turbines at the Kelmarsh wind farm [[1]](#1), available under a Creative Commons Attribution 4.0 International license, and
 - 5min SCADA data from 2022 to 2023 for 67 Australian wind farms, retrieved from the Nemweb archive from AEMO [[2]](#2), which is free to use for any purpose, when accurately and appropriately attributing AEMO as the author, see the [AEMO Copyright Permissions](https://www.aemo.com.au/energy-systems/electricity/national-electricity-market-nem/data-nem/market-data-nemweb).
+- Weather data retrieved via the [Open Weather API](https://openweathermap.org/api), licensed under the Creative Commons Attribution 4.0 International license. We used linear interplation to go from 1h to 5min resolution.
+
+In this repository, we provide the preprocessed data, which are the direct input to the models, instead of all raw data files. Preprocessing scripts are shared (`src/data/preprocessing`) for transparency in our data preparation process.
 
 ## Acknowledgment
 

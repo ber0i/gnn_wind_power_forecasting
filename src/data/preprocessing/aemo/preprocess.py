@@ -3,17 +3,78 @@ This script is for preprocessing the raw data such that it can be used for GNN m
 It does not have to be run but is provided for transparency reasons only.
 """
 
+from datetime import timedelta
+
 import numpy as np
 import pandas as pd
 
 datapath_raw = "data/raw/aemo/"
 datapath_processed = "data/processed/aemo/2022/"
 
-# read data
+# read wind power data
 df = pd.read_csv(
-    f"{datapath_raw}/wind_power/aemo_2022.csv", index_col=0, parse_dates=True
+    f"{datapath_raw}wind_power/aemo_2022.csv", index_col=0, parse_dates=True
 ).sort_index(axis=1)
-df_loc = pd.read_excel(f"{datapath_raw}/locations/locations_wind_farms.xlsx")
+
+# read location data
+df_loc = pd.read_excel(f"{datapath_raw}locations/locations_wind_farms.xlsx")
+
+# read weather data. Here we have one file per wind farm.
+# we concatenate them to one df
+# TODO: De-hardcode the 12-timestep shift (= 1 hour) to allow for flexible forecast horizons.
+for count, wind_farm in enumerate(df.columns):
+
+    if count == 0:
+
+        # initialize wind speed and direction dfs
+        df_wind_speed_100m = pd.read_parquet(
+            f"{datapath_raw}weather/{wind_farm}.parquet",
+            columns=["wind_speed_100m"],
+        )
+        # extract correct time subset (weather forecasts, i.e., future values as input!)
+        df_wind_speed_100m = df_wind_speed_100m[
+            df.index[0]
+            + timedelta(hours=1) : df.index[len(df) - 1]
+            + timedelta(hours=1)
+        ]
+
+        df_wind_direction_100m = pd.read_parquet(
+            f"{datapath_raw}weather/{wind_farm}.parquet",
+            columns=["wind_direction_100m"],
+        )
+        df_wind_direction_100m = df_wind_direction_100m[
+            df.index[0]
+            + timedelta(hours=1) : df.index[len(df) - 1]
+            + timedelta(hours=1)
+        ]
+
+    else:
+
+        df_wind_speed_100m_new = pd.read_parquet(
+            f"{datapath_raw}weather/{wind_farm}.parquet",
+            columns=["wind_speed_100m"],
+        )
+        df_wind_speed_100m_new = df_wind_speed_100m_new[
+            df.index[0]
+            + timedelta(hours=1) : df.index[len(df) - 1]
+            + timedelta(hours=1)
+        ]
+        df_wind_speed_100m = pd.concat(
+            [df_wind_speed_100m, df_wind_speed_100m_new], axis=1
+        )
+
+        df_wind_direction_100m_new = pd.read_parquet(
+            f"{datapath_raw}weather/{wind_farm}.parquet",
+            columns=["wind_direction_100m"],
+        )
+        df_wind_direction_100m_new = df_wind_direction_100m_new[
+            df.index[0]
+            + timedelta(hours=1) : df.index[len(df) - 1]
+            + timedelta(hours=1)
+        ]
+        df_wind_direction_100m = pd.concat(
+            [df_wind_direction_100m, df_wind_direction_100m_new], axis=1
+        )
 
 # drop all columns with at least 1000 null values
 null_counts = df.isnull().sum()
@@ -153,7 +214,31 @@ np.save(f"{datapath_processed}edge_attr_08.npy", edge_attr_eucl_08)
 np.save(f"{datapath_processed}edge_attr_09.npy", edge_attr_eucl_09)
 
 """
-Finally, we define the node features.
+Finally, we define the node features. We would like to use wind speed/direction
+forecasts as features, but historical forecasts are not available for our
+locations. We thus artifically create historical forecasts via adding normally
+distributed errors on the true data.
+To make sure that all values are non-negative after adding noise, we apply
+the ReLU function to the artificial forecasts.
 """
-x = np.array([df.iloc[:, i] for i in range(df.shape[1])])
+# TODO: More sophisticated weather forecast error induction.
+
+
+# define ReLU
+def relu(x):
+    return np.maximum(0, x)
+
+
+# shape: (n_windfarm, n_features, n_timesteps) = (75, 3, 105120)
+# i loops over the wind farms
+x = np.array(
+    [
+        [
+            df.iloc[:, i],
+            relu(df_wind_speed_100m.iloc[:, i] + np.random.normal(0, 1, len(df))),
+            relu(df_wind_direction_100m.iloc[:, i] + np.random.normal(0, 10, len(df))),
+        ]
+        for i in range(df.shape[1])
+    ]
+)
 np.save(f"{datapath_processed}x.npy", x)

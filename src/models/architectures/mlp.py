@@ -1,3 +1,9 @@
+"""
+For this MLP implementation only node features x are considered.
+The input array is a flattened array of length
+num_static_node_features * num_timesteps_in.
+"""
+
 from torch import nn
 
 from src.models.layers.mlp_layer import MLPLayer
@@ -12,7 +18,6 @@ class Model(nn.Module):
         self.output_features = 1
         self.d_model = 512
         self.layers = 2
-        self.output_attention = False
         self.dropout = 0.05
         self.activation = "gelu"
 
@@ -39,7 +44,9 @@ class Model(nn.Module):
 
     def forward(self, x, *_, **__):
 
-        # Reshape input
+        # Reshape input (flattening)
+        # (n_windfarms, num_static_node_features, num_timesteps_in)
+        # --> (n_windfarms, num_static_node_features * num_timesteps_in)
         outputs = x.reshape(x.shape[0], -1)
 
         # Pass through MLP
@@ -48,13 +55,5 @@ class Model(nn.Module):
 
         # Project
         outputs = self.projection(outputs)
-
-        # Reshape to correct output
-        outputs = outputs.view(
-            outputs.shape[0], self.num_timesteps_out, self.output_features
-        )
-
-        if self.output_attention:
-            return outputs, None
 
         return outputs

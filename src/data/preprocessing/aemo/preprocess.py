@@ -235,8 +235,8 @@ x = np.array(
     [
         [
             df.iloc[:, i],
-            relu(df_wind_speed_100m.iloc[:, i] + np.random.normal(0, 1, len(df))),
             relu(df_wind_direction_100m.iloc[:, i] + np.random.normal(0, 10, len(df))),
+            relu(df_wind_speed_100m.iloc[:, i] + np.random.normal(0, 1, len(df))),
         ]
         for i in range(df.shape[1])
     ]

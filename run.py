@@ -64,14 +64,26 @@ def main():
     parser.add_argument(
         "--train_data_amount",
         type=int,
-        default="10",
-        help="percentage of training data to use for training, options: integer between 1 and 100, default: 10",
+        default="1",
+        help="percentage of training data to use for training, options: integer between 1 and 100, default: 1",
     )
     parser.add_argument(
         "--use_wandb",
         type=bool,
         default=False,
         help="whether to track experiment in Weights & Biases, see https://wandb.ai/site, default: False",
+    )
+    parser.add_argument(
+        "--use_wind_direction",
+        type=bool,
+        default=False,
+        help="whether to use wind direction forecasts as input feature",
+    )
+    parser.add_argument(
+        "--use_wind_speed",
+        type=bool,
+        default=False,
+        help="whether to use wind speed forecasts as input feature",
     )
     parser.add_argument(
         "--wandb_project_name",
@@ -94,6 +106,7 @@ def main():
         num_timesteps_in=args.num_timesteps_in, num_timesteps_out=args.num_timesteps_out
     )
 
+    # extract num_static_node_features
     if len(data[0].x.shape) > 2:
         args.num_static_node_features = data[0].x.shape[1]
     else:
@@ -111,6 +124,7 @@ def main():
     if args.use_wandb:
         wandb.init(
             project=args.wandb_project_name,
+            # TODO: Update config
             config={
                 "model": args.model,
                 "data": args.data,
@@ -131,7 +145,7 @@ def main():
         ]:
 
             # Get right shape for node feature input
-            if len(snapshot.x.shape) > 2 or args.model == "tgcn":
+            if len(snapshot.x.shape) > 2:
                 x = snapshot.x
             else:
                 x = snapshot.x.reshape(snapshot.x.shape[0], 1, snapshot.x.shape[1])
@@ -147,7 +161,7 @@ def main():
                 y_hat = model(x, edge_index, edge_attr)
 
             # Mean squared error
-            loss = loss + torch.mean((y_hat.squeeze() - y) ** 2)
+            loss = loss + torch.mean((y_hat - y) ** 2)
             step += 1
 
         loss = loss / (step + 1)
@@ -185,7 +199,7 @@ def main():
                 y_hat = model(x, edge_index, edge_attr)
 
             # Mean squared error
-            loss = loss + torch.mean((y_hat.squeeze() - y) ** 2)
+            loss = loss + torch.mean((y_hat - y) ** 2)
 
             step += 1
             if step > horizon:

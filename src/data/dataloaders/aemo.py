@@ -13,17 +13,28 @@ class DataLoader:
         self.features = []
         self.targets = []
         self.correlation_treshold = args.correlation_threshold
+        self.use_wind_direction = args.use_wind_direction
+        self.use_wind_speed = args.use_wind_speed
         self._read_data()
 
     def _read_data(self):
 
         edge_index = np.load(
-            f"data/processed/aemo/edge_index_{self.correlation_treshold}.npy",
+            f"data/processed/aemo/2022/edge_index_{self.correlation_treshold}.npy",
         )
         edge_attr = np.load(
-            f"data/processed/aemo/edge_attr_{self.correlation_treshold}.npy",
+            f"data/processed/aemo/2022/edge_attr_{self.correlation_treshold}.npy",
         )
-        X = np.load("data/processed/aemo/x.npy")
+        X = np.load("data/processed/aemo/2022/x.npy")
+
+        # select the features to use for modeling
+        feature_selection_indices = [0]
+        if self.use_wind_direction:
+            feature_selection_indices.append(1)
+        if self.use_wind_speed:
+            feature_selection_indices.append(2)
+
+        X = X[:, feature_selection_indices, :]
 
         self.edge_index = torch.tensor(edge_index, dtype=torch.long)
 
@@ -34,10 +45,12 @@ class DataLoader:
         self.edge_attr = torch.tensor(edge_attr, dtype=torch.float)
 
         # Normalise X with z-score method
-        means = np.mean(X, axis=1, keepdims=True)
-        X = X - means
-        stds = np.std(X, axis=1, keepdims=True)
-        X = X / stds
+        # Compute mean over dimension 0 (wind farms) and 2 (time)
+        # This results in one mean value per feature
+        means = np.mean(X, axis=(0, 2))
+        X = X - means.reshape(1, -1, 1)  # reshape transforms to shape (1, n_feature, 1)
+        stds = np.std(X, axis=(0, 2))
+        X = X / stds.reshape(1, -1, 1)
         self.X = torch.tensor(X, dtype=torch.float)
 
     def _generate_task(self, num_timesteps_in: int = 12, num_timesteps_out: int = 12):
@@ -54,14 +67,14 @@ class DataLoader:
         """
         indices = [
             (i, i + (num_timesteps_in + num_timesteps_out))
-            for i in range(self.X.shape[1] - (num_timesteps_in + num_timesteps_out) + 1)
+            for i in range(self.X.shape[2] - (num_timesteps_in + num_timesteps_out) + 1)
         ]
 
         # Generate observations
         features, target = [], []
         for i, j in indices:
-            features.append((self.X[:, i : i + num_timesteps_in]).numpy())
-            target.append((self.X[:, i + num_timesteps_in : j]).numpy())
+            features.append((self.X[:, :, i : i + num_timesteps_in]).numpy())
+            target.append((self.X[:, 0, i + num_timesteps_in : j]).numpy())
 
         self.features = features
         self.targets = target
@@ -69,11 +82,11 @@ class DataLoader:
     def get_dataset(
         self, num_timesteps_in: int = 12, num_timesteps_out: int = 12
     ) -> StaticGraphTemporalSignal:
-        """Returns data iterator for Kelmarsh dataset as an instance of the
+        """Returns data iterator for AEMO dataset as an instance of the
         static graph temporal signal class.
 
         Return types:
-            * **dataset** *(StaticGraphTemporalSignal)* - The Kelmarsh wind speed
+            * **dataset** *(StaticGraphTemporalSignal)* - The AEMO wind power
                 forecasting dataset.
         """
         self._generate_task(num_timesteps_in, num_timesteps_out)
